@@ -62,7 +62,7 @@ public class LoadMeter extends HiccupMeter {
                         Thread.sleep(config.resolutionMs);
                     }
 
-                    long load = getLoad() * 1000;
+                    long load = getLoad();
                     histogram.recordValue(load);
 
                     if (newHistogram != null) {
@@ -129,7 +129,8 @@ public class LoadMeter extends HiccupMeter {
                 loadMeter.log.println("");
             }
 
-            loadMeter.config.outputValueUnitRatio = 1000.0;
+            // We want values in output to represent number of runnable threads as integers:
+            loadMeter.config.outputValueUnitRatio = 1.0;
 
             loadMeter.start();
 
