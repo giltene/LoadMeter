@@ -11,6 +11,7 @@ import org.jhiccup.internal.hdrhistogram.Histogram;
 
 import java.io.*;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 
 public class LoadMeter extends HiccupMeter {
     static final String defaultLoadMeterLogFileName = "loadmeter.%date.%pid";
@@ -55,15 +56,15 @@ public class LoadMeter extends HiccupMeter {
 
         @Override
         public void run() {
-            long counter = 0;
+            final long resolutionNsec = (long)(config.resolutionMs * 1000L * 1000L);
             try {
                 while (doRun) {
                     if (config.resolutionMs != 0) {
-                        Thread.sleep(config.resolutionMs);
+                        TimeUnit.NANOSECONDS.sleep(resolutionNsec);
                     }
 
                     long load = getLoad();
-                    histogram.recordValue(load);
+                    histogram.recordValue(load * 1000000L);
 
                     if (newHistogram != null) {
                         // Someone wants to replace the running histogram with a new one.
@@ -129,8 +130,17 @@ public class LoadMeter extends HiccupMeter {
                 loadMeter.log.println("");
             }
 
-            // We want values in output to represent number of runnable threads as integers:
-            loadMeter.config.outputValueUnitRatio = 1.0;
+            // We currently represent load in multiples of 1,000,000x in order to fit into
+            // the way latency logs like to report (msec units for nsec contents). This
+            // has the nasty side effect of showing non-whole integer values for load due
+            // to the histogram's bucket-boundary rounding at that level (and we really don't
+            // want to require 6 decimal point of accuracy in the histogram just for this).
+            //
+            // What we really want is for values in output to represent number of runnable
+            // threads as integers:
+            // loadMeter.config.outputValueUnitRatio = 1.0;
+            //
+            // We'll bring this back when we get an API for maxValueOutputRatio in HistogramLogWriter...
 
             loadMeter.start();
 
