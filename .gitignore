@@ -3,6 +3,7 @@ target
 out
 gh-pages
 LoadMeter.iml
+LoadMeter.jar
 .classpath
 .project
 .settings

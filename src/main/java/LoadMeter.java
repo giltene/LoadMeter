@@ -7,7 +7,8 @@
 
 import org.jhiccup.Version;
 import org.jhiccup.HiccupMeter;
-import org.jhiccup.internal.hdrhistogram.Histogram;
+import org.jhiccup.internal.hdrhistogram.*;
+
 
 import java.io.*;
 import java.util.Scanner;
@@ -38,8 +39,8 @@ public class LoadMeter extends HiccupMeter {
     }
 
     @Override
-    public HiccupRecorder createHiccupRecorder(Histogram initialHistogram) {
-        return new LoadRecorder(initialHistogram);
+    public HiccupRecorder createHiccupRecorder(final SingleWriterRecorder recorder) {
+        return new LoadRecorder(recorder);
     }
 
     @Override
@@ -49,8 +50,8 @@ public class LoadMeter extends HiccupMeter {
 
     class LoadRecorder extends HiccupRecorder {
 
-        LoadRecorder(final Histogram histogram) {
-            super(histogram, false);
+        LoadRecorder(final SingleWriterRecorder recorder) {
+            super(recorder, false);
             this.setName("LoadRecorder");
         }
 
@@ -64,19 +65,7 @@ public class LoadMeter extends HiccupMeter {
                     }
 
                     long load = getLoad();
-                    histogram.recordValue(load * 1000000L);
-
-                    if (newHistogram != null) {
-                        // Someone wants to replace the running histogram with a new one.
-                        // Do wait-free swapping. The recording loop stays wait-free, while the other side polls:
-                        final Histogram tempHistogram = histogram;
-                        histogram = newHistogram;
-                        newHistogram = null;
-                        // The requesting thread will observe oldHistogram through polling:
-                        oldHistogram = tempHistogram;
-                        // Signal that histogram was replaced:
-                        histogramReplacedSemaphore.release();
-                    }
+                    recorder.recordValue(load * 1000000L);
                 }
             } catch (InterruptedException e) {
                 if (config.verbose) {
